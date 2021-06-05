@@ -11,6 +11,7 @@ const gravAcceleration = 9.8;
 /// Initialize Simulation Variables
 let time,
    sectionEndTimes = {
+      // new section starts if time >= sectionEndTimes.<the previous one>
       spring: 0,
       surface: 0,
       ramp: 0,
@@ -19,9 +20,10 @@ let time,
 
 let maximumSystemEnergy, energyLostToFriction;
 
-let forceGravity, forceNormal;
+let forceGravity, forceNormal, forceSpring, forceFriction;
 
 let springPotentialEnergy,
+   currentSpringDisplacement, // as time goes on, displacement reaches 0 and block leaves
    angularFrequency, // the ω value
    springPeriod,
    springTimeToEquilibrium;
@@ -35,6 +37,16 @@ let blockKineticEnergy,
    blockVelocityY,
    frictionalAcceleration, // dependent on μk and block weight
    blockAngle;
+
+// Generate all relevant kinematics equations
+let xPositionFromSpring = (elapsedTime, initialCompression, angularFreq) =>
+   -1 * initialCompression * Math.cos(angularFreq * elapsedTime);
+let xVelocityFromSpring = (elapsedTime, initialCompression, angularFreq) =>
+   initialCompression * angularFreq * Math.sin(angularFreq * elapsedTime);
+let xPositionFromSurface = (elapsedTime, frictionAcceleration) =>
+   (frictionAcceleration / 2) * Math.pow(elapsedTime, 2);
+let xVelocityFromSurface = (elapsedTime, frictionAcceleration) =>
+   frictionAcceleration * elapsedTime;
 
 /// Listen for initial page load
 window.addEventListener("load", updateInputs, false);
@@ -92,6 +104,9 @@ function computeValues() {
    /// Compute the relevant energies
    computeEnergy();
 
+   /// Compute the current forces on the block
+   computeForces();
+
    updateTempDataOutput();
 }
 
@@ -105,21 +120,35 @@ function computeSpringValues() {
 }
 
 /// computeSectionEndTimes();
-/// ! calculate the end time (i.e. duration) of each section
+/// ~ calculate the end time (i.e. duration) of each section
 function computeSectionEndTimes() {
    sectionEndTimes.spring = springTimeToEquilibrium;
    sectionEndTimes.surface = 1000; //TEMP
+   sectionEndTimes.ramp = 1500;
 }
 
 /// computeBlockValues();
 /// ~calculate the position and velocity of the block based on its elapsed interactions with the spring, frictional surfaces, ramp, and air
 function computeBlockValues() {
-   /// Track the block's end-state after each time section
+   /// Calculate the block's end-state after each time section
    let accumulated = {
-      positionX: 0,
-      positionY: 0,
-      velocityX: 0,
-      velocityY: 0,
+      // * should only occur once
+      afterSpring: {
+         positionX: xPositionFromSpring(
+            springTimeToEquilibrium,
+            compressionDistance,
+            angularFrequency
+         ),
+         velocityX: xVelocityFromSpring(
+            springTimeToEquilibrium,
+            compressionDistance,
+            angularFrequency
+         ),
+      },
+      afterSurface: {
+         positionX: 0,
+         velocityX: 0,
+      },
    };
 
    /// Reset block's state
@@ -127,37 +156,36 @@ function computeBlockValues() {
    blockPositionY = 0;
    blockVelocityX = 0;
    blockVelocityY = 0;
+   blockAngle = 0;
 
-   // Calculate frictional acceleration opposite direction of motion
+   // Calculate frictional acceleration opposite direction of motion - can't use force data as it would be from prior frame
    frictionalAcceleration =
-      coefficientKineticFriction * blockMass * gravAcceleration;
-
-   // Generate all relevant kinematics equations
-   let xPositionFromSpring = (elapsedTime) =>
-      -1 * compressionDistance * Math.cos(angularFrequency * elapsedTime);
-   let xVelocityFromSpring = (elapsedTime) =>
-      compressionDistance *
-      angularFrequency *
-      Math.sin(angularFrequency * elapsedTime);
+      -1 * coefficientKineticFriction * gravAcceleration * Math.cos(blockAngle);
 
    /// Spring section
    if (time < sectionEndTimes.spring) {
-      blockPositionX = xPositionFromSpring(time);
-      blockPositionY = 0;
-
-      blockVelocityX = xVelocityFromSpring(time);
-      blockVelocityY = 0;
+      blockPositionX = xPositionFromSpring(
+         time,
+         compressionDistance,
+         angularFrequency
+      );
+      blockVelocityX = xVelocityFromSpring(
+         time,
+         compressionDistance,
+         angularFrequency
+      );
    } else {
       // Find end-state values after leaving spring
-      accumulated.positionX += xPositionFromSpring(springTimeToEquilibrium);
-      accumulated.velocityX += xVelocityFromSpring(springTimeToEquilibrium);
+      blockPositionX += accumulated.afterSpring.positionX;
+      blockVelocityX += accumulated.afterSpring.velocityX;
+   }
+
+   /// Surface secton
+   if (time < sectionEndTimes.surface) {
+      //blockPositionX = xPositionFromFriction();
    }
 
    // Net Block State
-   blockPositionX += accumulated.positionX;
-   blockPositionY += accumulated.positionY;
-   blockVelocityX += accumulated.velocityX;
-   blockVelocityY += accumulated.velocityY;
    blockVelocity = Math.sqrt(
       Math.pow(blockVelocityX, 2) + Math.pow(blockVelocityY, 2)
    );
@@ -171,7 +199,7 @@ function computeEnergy() {
       (1 / 2) * springConstant * Math.pow(compressionDistance, 2);
 
    /// Spring Potential Energy
-   let currentSpringDisplacement = Math.min(blockPositionX, 0); // once the block leaves the spring, energy = 9
+   currentSpringDisplacement = Math.abs(Math.min(blockPositionX, 0)); // once the block leaves the spring, energy = 0
    springPotentialEnergy =
       (1 / 2) * springConstant * Math.pow(currentSpringDisplacement, 2);
 
@@ -187,6 +215,19 @@ function computeEnergy() {
       (springPotentialEnergy + blockKineticEnergy + blockPotentialEnergy);
 }
 
+/// computeForces();
+/// ~ calculate the forces experienced by the block
+function computeForces() {
+   forceGravity = blockMass * gravAcceleration;
+   forceNormal = forceGravity * Math.cos(blockAngle);
+   forceSpring = springConstant * currentSpringDisplacement;
+   forceFriction =
+      time >= sectionEndTimes.spring &&
+      time < sectionEndTimes.ramp /* has friction */
+         ? coefficientKineticFriction * forceNormal
+         : 0;
+}
+
 /// updateTempDataOutput();
 /// ~ calculate some data to check the simulation's physics engine
 function updateTempDataOutput() {
@@ -199,6 +240,11 @@ function updateTempDataOutput() {
    page.innerHTML += `Block KE: ${blockKineticEnergy} <br>`;
    page.innerHTML += `Block PE: ${blockPotentialEnergy} <br>`;
    page.innerHTML += `Energy Lost: ${energyLostToFriction} <br>`;
+   page.innerHTML += `<br>`;
+   page.innerHTML += `F-grav: ${forceGravity} <br>`;
+   page.innerHTML += `F-normal: ${forceNormal} <br>`;
+   page.innerHTML += `F-spring: ${forceSpring} <br>`;
+   page.innerHTML += `F-friction: ${forceFriction} <br>`;
    page.innerHTML += `<br>`;
    page.innerHTML += `Spring Time To Equilibrium: ${sectionEndTimes.spring} <br>`;
    page.innerHTML += `Block X: ${blockPositionX} <br>`;
