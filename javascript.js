@@ -51,9 +51,10 @@ let xVelocityFromSurface = (elapsedTime, frictionAcceleration) =>
 /// Listen for initial page load
 window.addEventListener("load", updateInputs, false);
 
-/// updateInputs()
+/// updateInputs(calculateConstants)
+/// calculateConstants (boolean) : if the simulation's constants must be recomputed
 /// ~ read inputs from user, display numerical values, and update simulation
-function updateInputs() {
+function updateInputs(calculateConstants) {
    /// Read Inputs
    blockMass = parseFloat(document.getElementById("block-mass").value);
    springConstant = parseFloat(
@@ -85,6 +86,35 @@ function updateInputs() {
    time = parseFloat(document.getElementById("time").value);
    document.getElementById("display-time").innerHTML = `${time}`;
 
+   /// Calculate constants
+   if (calculateConstants) {
+      /// Compute the relevant spring variables
+      computeSpringValues();
+
+      /// Compute the sectionEndTimes
+      computeSectionEndTimes();
+
+      /// Calculate the block's end-state after each time section
+      accumulated = {
+         afterSpring: {
+            positionX: xPositionFromSpring(
+               springTimeToEquilibrium,
+               compressionDistance,
+               angularFrequency
+            ),
+            velocityX: xVelocityFromSpring(
+               springTimeToEquilibrium,
+               compressionDistance,
+               angularFrequency
+            ),
+         },
+         afterSurface: {
+            positionX: 0,
+            velocityX: 0,
+         },
+      };
+   }
+
    /// Update temporary data readout
    computeValues();
 }
@@ -92,12 +122,6 @@ function updateInputs() {
 /// computeValues();
 /// ~ using user inputs, calculate all relevant values for the simulation
 function computeValues() {
-   /// Compute the relevant spring variables
-   computeSpringValues(); //*should occur only once
-
-   /// Compute the sectionEndTimes
-   computeSectionEndTimes(); //*should occur only once
-
    /// Compute the position- and velocity- state of the block
    computeBlockValues();
 
@@ -130,27 +154,6 @@ function computeSectionEndTimes() {
 /// computeBlockValues();
 /// ~calculate the position and velocity of the block based on its elapsed interactions with the spring, frictional surfaces, ramp, and air
 function computeBlockValues() {
-   /// Calculate the block's end-state after each time section
-   let accumulated = {
-      // * should only occur once
-      afterSpring: {
-         positionX: xPositionFromSpring(
-            springTimeToEquilibrium,
-            compressionDistance,
-            angularFrequency
-         ),
-         velocityX: xVelocityFromSpring(
-            springTimeToEquilibrium,
-            compressionDistance,
-            angularFrequency
-         ),
-      },
-      afterSurface: {
-         positionX: 0,
-         velocityX: 0,
-      },
-   };
-
    /// Reset block's state
    blockPositionX = 0;
    blockPositionY = 0;
