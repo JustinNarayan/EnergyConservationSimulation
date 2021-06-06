@@ -8,7 +8,7 @@ let blockMass,
 /// Declare constants
 const gravAcceleration = 9.8;
 const rampDistance = 10; // arbitrary ramp distance away from spring equilibrium
-const rampLength = 10; // Arbitrary diagonal ramp length (hypotenuse)
+const rampLength = 5; // Arbitrary diagonal ramp length (hypotenuse)
 const makeRadian = (angle) => (Math.PI * angle) / 180;
 const floatErrorMargin = Math.pow(10, -8);
 
@@ -41,7 +41,8 @@ let blockKineticEnergy,
    blockVelocityX,
    blockVelocityY,
    generalFrictionalAcceleration, // dependent on μk and block weight
-   frictionalAcceleration, // changes based on ramp angle
+   downRampFrictionalAcceleration, // changes based on ramp angle
+   downRampGravAcceleration,
    blockAngle;
 
 /// Generate all relevant kinematics equations
@@ -49,6 +50,7 @@ const xPositionFromSpring = (elapsedTime, initialCompression, angularFreq) =>
    -1 * initialCompression * Math.cos(angularFreq * elapsedTime);
 const xVelocityFromSpring = (elapsedTime, initialCompression, angularFreq) =>
    initialCompression * angularFreq * Math.sin(angularFreq * elapsedTime);
+
 const xPositionFromSurface = (
    sectionStartTime,
    elapsedTime,
@@ -62,6 +64,23 @@ const xVelocityFromSurface = (
    elapsedTime,
    frictionAcceleration
 ) => frictionAcceleration * (elapsedTime - sectionStartTime);
+
+const xPositionFromRamp = (
+   sectionStartTime,
+   elapsedTime,
+   opposingAcceleration,
+   initialXVelocity
+) =>
+   initialXVelocity * (elapsedTime - sectionStartTime) +
+   (opposingAcceleration / 2) * Math.pow(elapsedTime - sectionStartTime, 2);
+const yPositionFromRamp = (
+   sectionStartTime,
+   elapsedTime,
+   opposingAcceleration,
+   initialYVelocity
+) =>
+   initialYVelocity * (elapsedTime - sectionStartTime) +
+   (opposingAcceleration / 2) * Math.pow(elapsedTime - sectionStartTime, 2);
 const netVelocityFromRamp = (
    sectionStartTime,
    elapsedTime,
@@ -125,6 +144,11 @@ function calculateConstants() {
    /// Compute constant acceleration
    generalFrictionalAcceleration =
       -1 * coefficientKineticFriction * gravAcceleration;
+   downRampFrictionalAcceleration =
+      -1 *
+      coefficientKineticFriction *
+      gravAcceleration *
+      Math.cos(makeRadian(rampAngle));
    downRampGravAcceleration =
       -1 * gravAcceleration * Math.sin(makeRadian(rampAngle));
 
@@ -157,10 +181,33 @@ function calculateConstants() {
       velocityY:
          accumulated.fromSurface.velocityX * Math.sin(makeRadian(rampAngle)),
    };
+   accumulated.fromRamp = {
+      velocityX: Math.max(
+         0, // in case, friction halts block before ramp
+         Math.sqrt(
+            Math.pow(accumulated.onEnteringRamp.velocityX, 2) +
+               2 *
+                  (downRampFrictionalAcceleration + downRampGravAcceleration) *
+                  Math.cos(makeRadian(rampAngle)) *
+                  (rampLength * Math.cos(makeRadian(rampAngle)))
+         ) || 0
+      ),
+      velocityY: Math.max(
+         0, // in case, friction halts block before ramp
+         Math.sqrt(
+            Math.pow(accumulated.onEnteringRamp.velocityY, 2) +
+               2 *
+                  (downRampFrictionalAcceleration + downRampGravAcceleration) *
+                  Math.sin(makeRadian(rampAngle)) *
+                  (rampLength * Math.sin(makeRadian(rampAngle)))
+         ) || 0
+      ),
+   };
    /// Compute the sectionEndTimes
    computeSectionEndTimes();
 
-   console.log(sectionEndTimes);
+   //console.log(sectionEndTimes);
+   console.log(accumulated.fromRamp);
 }
 
 /// computeValues();
@@ -194,11 +241,7 @@ function computeSectionEndTimes() {
    sectionEndTimes.spring = springTimeToEquilibrium;
 
    // On surface, block may experience friction, no friction, or stop entirely
-   if (
-      Math.abs(
-         accumulated.fromSurface.velocityX - accumulated.fromSpring.velocityX
-      ) < floatErrorMargin
-   ) {
+   if (coefficientKineticFriction == 0) {
       // no friction
       sectionEndTimes.surface =
          sectionEndTimes.spring +
@@ -214,7 +257,14 @@ function computeSectionEndTimes() {
             accumulated.fromSpring.velocityX) /
             generalFrictionalAcceleration;
    }
+
    sectionEndTimes.ramp = 1500; //TEMP
+
+   // On ramp, block may stop from friction/PE, stop from PE, exit with KE after friction/PE, or exit with KE after only PE
+   if (coefficientKineticFriction == 0) {
+      //if()
+   } else {
+   }
 }
 
 /// computeBlockValues();
@@ -226,10 +276,6 @@ function computeBlockValues() {
    blockVelocityX = 0;
    blockVelocityY = 0;
    blockAngle = 0;
-
-   // Calculate frictional acceleration opposite direction of motion - changes based on current section
-   frictionalAcceleration =
-      generalFrictionalAcceleration * Math.cos(makeRadian(blockAngle));
 
    // Based on the sections which have fully elapsed, calculate accumulated state values
    if (time >= sectionEndTimes.spring) {
@@ -247,28 +293,28 @@ function computeBlockValues() {
    /// Based on current section, calculate in-section state values
    if (time < sectionEndTimes.spring) {
       // Spring
-      blockPositionX += xPositionFromSpring(
+      blockVelocityX += xVelocityFromSpring(
          time,
          compressionDistance,
          angularFrequency
       );
-      blockVelocityX += xVelocityFromSpring(
+      blockPositionX += xPositionFromSpring(
          time,
          compressionDistance,
          angularFrequency
       );
    } else if (time < sectionEndTimes.surface) {
       // Surface
-      blockPositionX += xPositionFromSurface(
-         sectionEndTimes.spring,
-         time,
-         frictionalAcceleration,
-         accumulated.fromSpring.velocityX
-      );
       blockVelocityX += xVelocityFromSurface(
          sectionEndTimes.spring,
          time,
-         frictionalAcceleration
+         generalFrictionalAcceleration
+      );
+      blockPositionX += xPositionFromSurface(
+         sectionEndTimes.spring,
+         time,
+         generalFrictionalAcceleration,
+         accumulated.fromSpring.velocityX
       );
    } else if (time < sectionEndTimes.ramp) {
       //Ramp
@@ -278,14 +324,29 @@ function computeBlockValues() {
          netVelocityFromRamp(
             sectionEndTimes.surface,
             time,
-            frictionalAcceleration + downRampGravAcceleration
+            downRampFrictionalAcceleration + downRampGravAcceleration
          ) * Math.cos(makeRadian(blockAngle));
       blockVelocityY +=
          netVelocityFromRamp(
             sectionEndTimes.surface,
             time,
-            frictionalAcceleration + downRampGravAcceleration
+            downRampFrictionalAcceleration + downRampGravAcceleration
          ) * Math.sin(makeRadian(blockAngle));
+
+      blockPositionX += xPositionFromRamp(
+         sectionEndTimes.surface,
+         time,
+         (downRampFrictionalAcceleration + downRampGravAcceleration) *
+            Math.cos(makeRadian(blockAngle)),
+         accumulated.onEnteringRamp.velocityX
+      );
+      blockPositionY += yPositionFromRamp(
+         sectionEndTimes.surface,
+         time,
+         (downRampFrictionalAcceleration + downRampGravAcceleration) *
+            Math.sin(makeRadian(blockAngle)),
+         accumulated.onEnteringRamp.velocityY
+      );
    }
 
    // Net Block Velocity
