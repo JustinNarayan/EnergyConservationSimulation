@@ -7,6 +7,7 @@ let blockMass,
 
 /// Declare constants
 const gravAcceleration = 9.8;
+const rampDistance = 10; // arbitrary ramp distance away from spring equilibrium
 
 /// Initialize Simulation Variables
 let time,
@@ -39,11 +40,11 @@ let blockKineticEnergy,
   blockAngle;
 
 /// Generate all relevant kinematics equations
-let xPositionFromSpring = (elapsedTime, initialCompression, angularFreq) =>
+const xPositionFromSpring = (elapsedTime, initialCompression, angularFreq) =>
   -1 * initialCompression * Math.cos(angularFreq * elapsedTime);
-let xVelocityFromSpring = (elapsedTime, initialCompression, angularFreq) =>
+const xVelocityFromSpring = (elapsedTime, initialCompression, angularFreq) =>
   initialCompression * angularFreq * Math.sin(angularFreq * elapsedTime);
-let xPositionFromSurface = (
+const xPositionFromSurface = (
   sectionStartTime,
   elapsedTime,
   frictionAcceleration,
@@ -51,7 +52,7 @@ let xPositionFromSurface = (
 ) =>
   initialVelocity * (elapsedTime - sectionStartTime) +
   (frictionAcceleration / 2) * Math.pow(elapsedTime - sectionStartTime, 2);
-let xVelocityFromSurface = (
+const xVelocityFromSurface = (
   sectionStartTime,
   elapsedTime,
   frictionAcceleration
@@ -131,7 +132,7 @@ function computeSpringValues() {
 function computeSectionEndTimes() {
   sectionEndTimes.spring = springTimeToEquilibrium;
   sectionEndTimes.surface = 1000; //TEMP
-  sectionEndTimes.ramp = 1500;
+  sectionEndTimes.ramp = 1500; //TEMP
 }
 
 /// computeBlockValues();
