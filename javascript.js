@@ -29,6 +29,7 @@ let springPotentialEnergy,
    springPeriod,
    springTimeToEquilibrium;
 
+const accumulated = {}; // track the state effects from (and ONLY from) each individual section
 let blockKineticEnergy,
    blockPotentialEnergy,
    blockPositionX,
@@ -36,7 +37,8 @@ let blockKineticEnergy,
    blockVelocity,
    blockVelocityX,
    blockVelocityY,
-   frictionalAcceleration, // dependent on μk and block weight
+   generalFrictionalAcceleration, // dependent on μk and block weight
+   frictionalAcceleration, // changes based on ramp angle
    blockAngle;
 
 /// Generate all relevant kinematics equations
@@ -61,10 +63,10 @@ const xVelocityFromSurface = (
 /// Listen for initial page load
 window.addEventListener("load", updateInputs, false);
 
-/// updateInputs(calculateConstants)
-/// calculateConstants (boolean) : if the simulation's constants must be recomputed
+/// updateInputs(recomputeConstants)
+/// recomputeConstants (boolean) : if the simulation's constants must be recomputed
 /// ~ read inputs from user, display numerical values, and update simulation
-function updateInputs() {
+function updateInputs(recomputeConstants) {
    /// Read Inputs
    blockMass = parseFloat(document.getElementById("block-mass").value);
    springConstant = parseFloat(
@@ -96,19 +98,61 @@ function updateInputs() {
    time = parseFloat(document.getElementById("time").value);
    document.getElementById("display-time").innerHTML = `${time}`;
 
+   /// Calculate Constants
+   if (recomputeConstants) {
+      calculateConstants();
+   }
+
    /// Update temporary data readout
    computeValues();
 }
 
-/// computeValues();
-/// ~ using user inputs, calculate all relevant values for the simulation
-function computeValues() {
+/// calculateConstants();
+/// ~ from certain user inputs, recalculate the relevant constants; avoids unnecessary
+/// recalculations
+function calculateConstants() {
    /// Compute the relevant spring variables
-   computeSpringValues(); //*should occur only once
+   computeSpringValues();
+
+   /// Compute general frictional acceleration
+   generalFrictionalAcceleration =
+      -1 * coefficientKineticFriction * gravAcceleration;
+
+   /// Calculate the block's end-state after each time section
+   /// each section is calculated separately so prior sections can be referenced
+   accumulated.fromSpring = {
+      positionX: xPositionFromSpring(
+         springTimeToEquilibrium,
+         compressionDistance,
+         angularFrequency
+      ),
+      velocityX: xVelocityFromSpring(
+         springTimeToEquilibrium,
+         compressionDistance,
+         angularFrequency
+      ),
+   };
+   accumulated.fromSurface = {
+      positionX: rampDistance,
+      velocityX:
+         Math.max(
+            0, // in case, friction halts block before ramp
+            Math.sqrt(
+               Math.pow(accumulated.fromSpring.velocityX, 2) +
+                  2 * generalFrictionalAcceleration * rampDistance
+            ) || 0
+         ) - accumulated.fromSpring.velocityX, // (v-final)^2 = (v-initial)^2 + 2(displacement) => || 0 if NaN
+   };
 
    /// Compute the sectionEndTimes
-   computeSectionEndTimes(); //*should occur only once
+   computeSectionEndTimes();
 
+   console.log(sectionEndTimes);
+}
+
+/// computeValues();
+/// ~ using all user inputs, calculate all relevant values for the simulation
+function computeValues() {
    /// Compute the position- and velocity- state of the block
    computeBlockValues();
 
@@ -134,34 +178,15 @@ function computeSpringValues() {
 /// ~ calculate the end time (i.e. duration) of each section
 function computeSectionEndTimes() {
    sectionEndTimes.spring = springTimeToEquilibrium;
-   sectionEndTimes.surface = 1000; //TEMP
+   sectionEndTimes.surface =
+      sectionEndTimes.spring +
+      accumulated.fromSurface.velocityX / generalFrictionalAcceleration; // (velocity-change) / (acceleration) = time
    sectionEndTimes.ramp = 1500; //TEMP
 }
 
 /// computeBlockValues();
 /// ~ calculate the position and velocity of the block based on its elapsed interactions with the spring, frictional surfaces, ramp, and air
 function computeBlockValues() {
-   /// Calculate the block's end-state after each time section
-   let accumulated = {
-      // * should only occur once
-      afterSpring: {
-         positionX: xPositionFromSpring(
-            springTimeToEquilibrium,
-            compressionDistance,
-            angularFrequency
-         ),
-         velocityX: xVelocityFromSpring(
-            springTimeToEquilibrium,
-            compressionDistance,
-            angularFrequency
-         ),
-      },
-      afterSurface: {
-         positionX: 0,
-         velocityX: 0,
-      },
-   };
-
    /// Reset block's state
    blockPositionX = 0;
    blockPositionY = 0;
@@ -171,7 +196,7 @@ function computeBlockValues() {
 
    // Calculate frictional acceleration opposite direction of motion - can't use force data as it would be from prior frame
    frictionalAcceleration =
-      -1 * coefficientKineticFriction * gravAcceleration * Math.cos(blockAngle);
+      generalFrictionalAcceleration * Math.cos(blockAngle);
 
    /// Based on current section, calculate in-section state values
    if (time < sectionEndTimes.spring) {
@@ -192,7 +217,7 @@ function computeBlockValues() {
          sectionEndTimes.spring,
          time,
          frictionalAcceleration,
-         accumulated.afterSpring.velocityX
+         accumulated.fromSpring.velocityX
       );
       blockVelocityX = xVelocityFromSurface(
          sectionEndTimes.spring,
@@ -204,13 +229,13 @@ function computeBlockValues() {
    // Based on the sections which have fully elapsed, calculate accumulated state values
    if (time >= sectionEndTimes.spring) {
       // After the surface
-      blockPositionX += accumulated.afterSpring.positionX;
-      blockVelocityX += accumulated.afterSpring.velocityX;
+      blockPositionX += accumulated.fromSpring.positionX;
+      blockVelocityX += accumulated.fromSpring.velocityX;
    }
    if (time >= sectionEndTimes.surface) {
       // After the surface
-      blockPositionX += accumulated.afterSurface.positionX;
-      blockVelocityX += accumulated.afterSurface.velocityX;
+      blockPositionX += accumulated.fromSurface.positionX;
+      blockVelocityX += accumulated.fromSurface.velocityX;
    }
 
    // Net Block State
