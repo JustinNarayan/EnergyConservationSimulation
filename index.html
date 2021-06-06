@@ -3,24 +3,21 @@
   <script src="javascript.js"></script>
 </head>
 <body>
-   <div id="inputs-section">
-      <div id="constant-changing-inputs" onchange="updateInputs(true)"> 
-         <!-- Inputs which require recalculation of simulation constants-->
-         <p class="input-titles">Block Mass (kilograms): <span id="display-block-mass"></span></p>
-         <input type="range" min="5" max="20" value="12" step="1" id="block-mass">
+   <div id="inputs-section" onchange="updateInputs()">
+      <p class="input-titles">Block Mass (kilograms): <span id="display-block-mass"></span></p>
+      <input type="range" min="5" max="20" value="12" step="0.5" id="block-mass">
 
          <p class="input-titles">Spring Constant (Newtons / meter): <span id="display-spring-constant"></span></p>
          <input type="range" min="0.5" max="10" value="5" step="0.1" id="spring-constant">
 
-         <p class="input-titles">Compression Distance (meters): <span id="display-compression-distance"></span></p>
-         <input type="range" min="1" max="20" value="10" step="1" id="compression-distance">
+      <p class="input-titles">Compression Distance (meters): <span id="display-compression-distance"></span></p>
+      <input type="range" min="5" max="20" value="10" step="0.5" id="compression-distance">
 
-         <p class="input-titles">Ramp Angle (degrees): <span id="display-ramp-angle"></span></p>
-         <input type="range" min="10" max="80" value="45" id="ramp-angle">
-         
-         <p class="input-titles">Coefficient of Kinetic Friction: <span id="display-coefficient-kinetic-friction"></span></p>
-         <input type="range" min="0" max="1" value="0.5" step="0.02" id="coefficient-kinetic-friction">
-      </div>
+      <p class="input-titles">Ramp Angle (degrees): <span id="display-ramp-angle"></span></p>
+      <input type="range" min="10" max="80" value="45" step="1" id="ramp-angle">
+      
+      <p class="input-titles">Coefficient of Kinetic Friction: <span id="display-coefficient-kinetic-friction"></span></p>
+      <input type="range" min="0" max="1" value="0.1" step="0.02" id="coefficient-kinetic-friction">
 
       <br>
       TEMPORARY
