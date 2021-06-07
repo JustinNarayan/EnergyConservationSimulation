@@ -1,3 +1,5 @@
+/// When friction = 0, the times get messed up => why?
+
 /// Declare Input Variables
 let blockMass,
    springConstant,
@@ -86,6 +88,22 @@ const netVelocityFromRamp = (
    elapsedTime,
    opposingAcceleration
 ) => opposingAcceleration * (elapsedTime - sectionStartTime);
+
+const xPositionFromAir = (sectionStartTime, elapsedTime, xVelocity) =>
+   xVelocity * (elapsedTime - sectionStartTime);
+const yPositionFromAir = (
+   sectionStartTime,
+   elapsedTime,
+   downwardAcceleration,
+   initialYVelocity
+) =>
+   initialYVelocity * (elapsedTime - sectionStartTime) +
+   (downwardAcceleration / 2) * Math.pow(elapsedTime - sectionStartTime, 2);
+const yVelocityFromAir = (
+   sectionStartTime,
+   elapsedTime,
+   downwardAcceleration
+) => downwardAcceleration * (elapsedTime - sectionStartTime);
 
 /// Listen for initial page load
 window.addEventListener("load", updateInputs, false);
@@ -214,8 +232,8 @@ function calculateConstants() {
    /// Compute the sectionEndTimes
    computeSectionEndTimes();
 
-   //console.log(sectionEndTimes);
-   console.log(accumulated.fromRamp);
+   console.log(sectionEndTimes);
+   console.log(accumulated);
 }
 
 /// computeValues();
@@ -273,6 +291,21 @@ function computeSectionEndTimes() {
             accumulated.onEnteringRamp.velocityX) /
             downRampNetXAcceleration;
    }
+
+   // In air, block experiences only gravitational acceleration
+   // rearrange [ (displacement) = a/2*t^2 + (v-initial)*t ] to solve for most far-ahead time
+   // there is always a positive root
+   // solve as t = [ (-v-initial) - sqrt((v-initial)^2 + 2(abs(a*displacement)) ] / -abs(a)
+   sectionEndTimes.air =
+      sectionEndTimes.ramp +
+      (-accumulated.fromRamp.velocityY -
+         Math.sqrt(
+            Math.pow(accumulated.fromRamp.velocityY, 2) +
+               2 * gravAcceleration * accumulated.fromRamp.positionY
+         )) /
+         -gravAcceleration;
+
+   console.log(sectionEndTimes.air);
 }
 
 /// computeBlockValues();
@@ -296,6 +329,12 @@ function computeBlockValues() {
       blockPositionX = accumulated.fromSurface.positionX;
       blockVelocityX = accumulated.onEnteringRamp.velocityX;
       blockVelocityY = accumulated.onEnteringRamp.velocityY;
+   }
+   if (time >= sectionEndTimes.ramp) {
+      blockPositionX = accumulated.fromRamp.positionX;
+      blockPositionY = accumulated.fromRamp.positionY;
+      blockVelocityX = accumulated.fromRamp.velocityX;
+      blockVelocityY = accumulated.fromRamp.velocityY;
    }
 
    /// Based on current section, calculate in-section state values
@@ -325,7 +364,7 @@ function computeBlockValues() {
          accumulated.fromSpring.velocityX
       );
    } else if (time < sectionEndTimes.ramp) {
-      //Ramp
+      // Ramp
       blockAngle = rampAngle;
 
       blockVelocityX +=
@@ -352,6 +391,27 @@ function computeBlockValues() {
          time,
          downRampNetYAcceleration,
          accumulated.onEnteringRamp.velocityY
+      );
+   } else if (time < sectionEndTimes.air) {
+      // Air
+
+      // blockVelocityX constant in section
+      blockVelocityY += yVelocityFromAir(
+         sectionEndTimes.ramp,
+         time,
+         -1 * gravAcceleration
+      );
+
+      blockPositionX += xPositionFromAir(
+         sectionEndTimes.ramp,
+         time,
+         accumulated.fromRamp.velocityX
+      );
+      blockPositionY += yPositionFromAir(
+         sectionEndTimes.ramp,
+         time,
+         -1 * gravAcceleration,
+         accumulated.fromRamp.velocityY
       );
    }
 
