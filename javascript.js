@@ -6,7 +6,12 @@ let blockMass,
    coefficientKineticFriction; // the μk value
 
 /// Declare constants
-const PIXELS_PER_METER = 8;
+const dirUp = 90,
+   dirDown = 270,
+   dirLeft = 180,
+   dirRight = 0;
+const PIXELS_PER_METER = 6,
+   PIXELS_PER_NEWTON = 0.5;
 const gravAcceleration = 9.8;
 const rampDistance = 15; // arbitrary ramp distance away from spring equilibrium
 const rampLength = 15; // Arbitrary diagonal ramp length (hypotenuse)
@@ -25,8 +30,6 @@ const sectionEndTimes = {
 };
 
 let maximumSystemEnergy, energyLostToFriction;
-
-let forceGravity, forceNormal, forceSpring, forceFriction;
 
 let springPotentialEnergy,
    currentSpringDisplacement, // as time goes on, displacement reaches 0 and block leaves
@@ -105,22 +108,52 @@ const yVelocityFromAir = (
    downwardAcceleration
 ) => downwardAcceleration * (elapsedTime - sectionStartTime);
 
+/// Force
+/// ~ class for each force acting on the box through the simulation
+class Force {
+   constructor(colour, direction = 0) {
+      this.colour = colour;
+      this.direction = direction; // degrees, as certain forces have constant, non-input based directions
+      this.magnitude = 0; // newtons
+   }
+
+   setDirection(direction) {
+      this.direction = direction;
+   }
+
+   setMagnitude(magnitude) {
+      this.magnitude = magnitude;
+   }
+}
+
+let forceGravity = new Force("darkviolet", dirDown),
+   forceNormal = new Force("royalblue"),
+   forceSpring = new Force("crimson", dirRight),
+   forceFriction = new Force("magenta");
+
 /// Canvas variables
 let canvas, width, height, ctx;
 
 let X_ZERO, Y_ZERO; // variables to track the origin coordinates using canvas dimensions
 
-let floorColour = "black",
+const floorColour = "black",
    floorHeight = 80,
    springBaseWidth = 20,
    rampColour = "gray";
 
-let springWidthMax = 180,
+const springWidthMax = 180,
    springHeight = 48,
    ballDiameter = springHeight;
 
+const xFBD = 120,
+   yFBD = 120,
+   ballDiameterFBD = 24,
+   forceArrowRectWidth = 3,
+   forceArrowTipWidth = 12,
+   forceArrowTipHeight = 12;
+
 /// Initialize images
-let ballImage = new Image(),
+const ballImage = new Image(),
    springImage = new Image();
 ballImage.src = "images/ball.png";
 springImage.src = "images/spring.png"; // 1080px by 288px
@@ -484,17 +517,24 @@ function computeEnergy() {
 /// computeForces();
 /// ~ calculate the forces experienced by the block
 function computeForces() {
-   forceGravity = blockMass * gravAcceleration;
-   forceNormal =
+   forceGravity.setMagnitude(blockMass * gravAcceleration);
+
+   forceNormal.setMagnitude(
       time < sectionEndTimes.ramp
-         ? forceGravity * Math.cos(makeRadian(blockAngle))
-         : 0;
-   forceSpring = springConstant * currentSpringDisplacement;
-   forceFriction =
+         ? forceGravity.magnitude * Math.cos(makeRadian(blockAngle))
+         : 0
+   );
+   forceNormal.setDirection(dirUp + blockAngle);
+
+   forceSpring.setMagnitude(springConstant * currentSpringDisplacement);
+
+   forceFriction.setMagnitude(
       time >= sectionEndTimes.spring &&
-      time < sectionEndTimes.ramp /* has friction */
-         ? coefficientKineticFriction * forceNormal
-         : 0;
+         time < sectionEndTimes.ramp /* has friction */
+         ? coefficientKineticFriction * forceNormal.magnitude
+         : 0
+   );
+   forceFriction.setDirection(dirLeft + blockAngle);
 }
 
 /// loadCanvas()
@@ -525,6 +565,7 @@ function drawToCanvas() {
    ctx.clearRect(0, 0, width, height);
    drawStaticElements();
    drawDynamicElements();
+   drawFreeBodyDiagram();
 }
 
 /// drawStaticElements()
@@ -573,4 +614,90 @@ function drawDynamicElements() {
       springWidthMax + PIXELS_PER_METER * Math.min(0, blockPositionX),
       springHeight
    );
+}
+
+/// drawFreeBodyDiagram();
+/// ~ draw a free body diagram of the ball
+function drawFreeBodyDiagram() {
+   ctx.drawImage(
+      ballImage,
+      xFBD - ballDiameterFBD / 2,
+      yFBD - ballDiameterFBD / 2,
+      ballDiameterFBD,
+      ballDiameterFBD
+   );
+   drawForceArrow(xFBD, yFBD, forceGravity);
+   drawForceArrow(xFBD, yFBD, forceNormal);
+   drawForceArrow(xFBD, yFBD, forceSpring);
+   drawForceArrow(xFBD, yFBD, forceFriction);
+}
+
+/// drawForceArrow();
+/// ~ draw a force arrow of certain magnitude and direction for the FBD
+function drawForceArrow(xFrom, yFrom, force) {
+   if (!force.magnitude) return;
+
+   // Account for all angled forces
+   let oppOffset = Math.sin(makeRadian(force.direction));
+   let adjOffset = Math.cos(makeRadian(force.direction));
+
+   ctx.fillStyle = force.colour;
+   ctx.beginPath();
+
+   ctx.moveTo(
+      // Rect Bottom
+      xFrom - forceArrowRectWidth * oppOffset,
+      yFrom - forceArrowRectWidth * adjOffset
+   );
+   ctx.lineTo(
+      // Rect Top
+      xFrom +
+         -forceArrowRectWidth * oppOffset +
+         force.magnitude * PIXELS_PER_NEWTON * adjOffset,
+      yFrom +
+         -forceArrowRectWidth * adjOffset -
+         force.magnitude * PIXELS_PER_NEWTON * oppOffset
+   );
+   ctx.lineTo(
+      // Arrow Tip Base
+      xFrom +
+         -forceArrowTipWidth * oppOffset +
+         force.magnitude * PIXELS_PER_NEWTON * adjOffset,
+      yFrom +
+         -forceArrowTipWidth * adjOffset -
+         force.magnitude * PIXELS_PER_NEWTON * oppOffset
+   );
+   ctx.lineTo(
+      // Arrow Tip Top
+      xFrom +
+         forceArrowTipHeight * adjOffset +
+         force.magnitude * PIXELS_PER_NEWTON * adjOffset,
+      yFrom -
+         forceArrowTipHeight * oppOffset -
+         force.magnitude * PIXELS_PER_NEWTON * oppOffset
+   );
+   ctx.lineTo(
+      // Arrow Tip Base
+      xFrom +
+         forceArrowTipWidth * oppOffset +
+         force.magnitude * PIXELS_PER_NEWTON * adjOffset,
+      yFrom +
+         forceArrowTipWidth * adjOffset -
+         force.magnitude * PIXELS_PER_NEWTON * oppOffset
+   );
+   ctx.lineTo(
+      // Rect Top
+      xFrom +
+         forceArrowRectWidth * oppOffset +
+         force.magnitude * PIXELS_PER_NEWTON * adjOffset,
+      yFrom +
+         forceArrowRectWidth * adjOffset -
+         force.magnitude * PIXELS_PER_NEWTON * oppOffset
+   );
+   ctx.lineTo(
+      // Rect Bottom
+      xFrom + forceArrowRectWidth * oppOffset,
+      yFrom + forceArrowRectWidth * adjOffset
+   );
+   ctx.fill();
 }
