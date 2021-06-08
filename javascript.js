@@ -10,6 +10,8 @@ const gravAcceleration = 9.8;
 const rampDistance = 10; // arbitrary ramp distance away from spring equilibrium
 const rampLength = 5; // Arbitrary diagonal ramp length (hypotenuse)
 const makeRadian = (angle) => (Math.PI * angle) / 180;
+const quadraticFormula = (a, b, c) =>
+   (-b - Math.sqrt(Math.pow(b, 2) - 4 * a * c)) / (2 * a); // takes the farthest time in the future
 
 /// Initialize Simulation Variables
 let time;
@@ -205,7 +207,7 @@ function calculateConstants() {
    accumulated.fromRamp = {
       positionX:
          accumulated.fromSurface.positionX +
-         rampLength * Math.cos(makeRadian(rampAngle)), // use the max possible, as time calcs use velocity
+         rampLength * Math.cos(makeRadian(rampAngle)), // use the max possible, the accumulated velocity values truly reflect the end state of the block
       positionY: rampLength * Math.sin(makeRadian(rampAngle)),
       velocityX: Math.max(
          0, // in case, friction halts block before ramp
@@ -217,7 +219,7 @@ function calculateConstants() {
          ) || 0
       ),
       velocityY: Math.max(
-         0, // in case, friction halts block before ramp
+         0, // in case friction halts block before ramp
          Math.sqrt(
             Math.pow(accumulated.onEnteringRamp.velocityY, 2) +
                2 *
@@ -226,6 +228,23 @@ function calculateConstants() {
          ) || 0
       ),
    };
+   accumulated.onLanding = {
+      positionX:
+         accumulated.fromRamp.positionX +
+         accumulated.fromRamp.velocityX *
+            quadraticFormula(
+               -gravAcceleration / 2,
+               accumulated.fromRamp.velocityY,
+               accumulated.fromRamp.positionY
+            ),
+      positionY: 0,
+      velocityX: accumulated.fromRamp.velocityX,
+      velocityY: -Math.sqrt(
+         Math.pow(accumulated.fromRamp.velocityY, 2) +
+            2 * (-gravAcceleration * -accumulated.fromRamp.positionY)
+      ),
+   };
+
    /// Compute the sectionEndTimes
    computeSectionEndTimes();
 
@@ -294,20 +313,11 @@ function computeSectionEndTimes() {
             downRampNetXAcceleration;
    }
 
-   // In air, block experiences only gravitational acceleration
-   // rearrange [ (displacement) = a/2*t^2 + (v-initial)*t ] to solve for most far-ahead time
-   // there is always a positive root
-   // solve as t = [ (-v-initial) - sqrt((v-initial)^2 + 2(abs(a*displacement)) ] / -abs(a)
+   // In air, block experiences only gravitational acceleration, calculate time from x-distanced travelled at constant velocity in air
    sectionEndTimes.air =
       sectionEndTimes.ramp +
-      (-accumulated.fromRamp.velocityY -
-         Math.sqrt(
-            Math.pow(accumulated.fromRamp.velocityY, 2) +
-               2 * gravAcceleration * accumulated.fromRamp.positionY
-         )) /
-         -gravAcceleration;
-
-   console.log(sectionEndTimes.air);
+      (accumulated.onLanding.positionX - accumulated.fromRamp.positionX) /
+         accumulated.onLanding.velocityX;
 }
 
 /// computeBlockValues();
