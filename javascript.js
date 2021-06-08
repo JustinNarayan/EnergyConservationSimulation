@@ -104,8 +104,18 @@ const yVelocityFromAir = (
    downwardAcceleration
 ) => downwardAcceleration * (elapsedTime - sectionStartTime);
 
+/// Canvas variables
+let canvas, width, height, ctx;
+
 /// Listen for initial page load
-window.addEventListener("load", updateInputs, false);
+window.addEventListener(
+   "load",
+   () => {
+      updateInputs(true);
+      loadCanvas();
+   },
+   false
+);
 
 /// updateInputs(recomputeConstants)
 /// recomputeConstants (boolean) : if the simulation's constants must be recomputed
@@ -263,8 +273,6 @@ function computeValues() {
 
    /// Compute the current forces on the block
    computeForces();
-
-   updateTempDataOutput();
 }
 
 /// computeSpringValues();
@@ -473,27 +481,18 @@ function computeForces() {
          : 0;
 }
 
-/// updateTempDataOutput();
-/// ~ calculate some data to check the simulation's physics engine
-function updateTempDataOutput() {
-   let page = document.getElementById("temp-data-output");
+/// loadCanvas()
+/// ~ init reference values for canvas
+function loadCanvas() {
+   canvas = document.getElementById("canvas");
+   width = canvas.width;
+   height = canvas.height;
+   ctx = canvas.getContext("2d");
 
-   /// Clear page then write information
-   page.innerHTML = ``;
-   page.innerHTML += `Maximum Energy: ${maximumSystemEnergy} <br>`;
-   page.innerHTML += `Spring PE: ${springPotentialEnergy} <br>`;
-   page.innerHTML += `Block KE: ${blockKineticEnergy} <br>`;
-   page.innerHTML += `Block PE: ${blockPotentialEnergy} <br>`;
-   page.innerHTML += `Energy Lost: ${energyLostToFriction} <br>`;
-   page.innerHTML += `<br>`;
-   page.innerHTML += `F-grav: ${forceGravity} <br>`;
-   page.innerHTML += `F-normal: ${forceNormal} <br>`;
-   page.innerHTML += `F-spring: ${forceSpring} <br>`;
-   page.innerHTML += `F-friction: ${forceFriction} <br>`;
-   page.innerHTML += `<br>`;
-   page.innerHTML += `Block X: ${blockPositionX} <br>`;
-   page.innerHTML += `Block Y: ${blockPositionY} <br>`;
-   page.innerHTML += `Block Velocity X: ${blockVelocityX} <br>`;
-   page.innerHTML += `Block Velocity Y: ${blockVelocityY} <br>`;
-   page.innerHTML += `Block Velocity Net: ${blockNetVelocity} <br>`;
+   //Make images crisper
+   ctx.mozImageSmoothingEnabled = false;
+   ctx.oImageSmoothingEnabled = false;
+   ctx.webkitImageSmoothingEnabled = false;
+   ctx.msImageSmoothingEnabled = false;
+   ctx.imageSmoothingEnabled = false;
 }
