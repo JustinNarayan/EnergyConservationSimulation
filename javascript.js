@@ -6,9 +6,10 @@ let blockMass,
    coefficientKineticFriction; // the μk value
 
 /// Declare constants
+const PIXELS_PER_METER = 8;
 const gravAcceleration = 9.8;
-const rampDistance = 10; // arbitrary ramp distance away from spring equilibrium
-const rampLength = 5; // Arbitrary diagonal ramp length (hypotenuse)
+const rampDistance = 15; // arbitrary ramp distance away from spring equilibrium
+const rampLength = 15; // Arbitrary diagonal ramp length (hypotenuse)
 const makeRadian = (angle) => (Math.PI * angle) / 180;
 const quadraticFormula = (a, b, c) =>
    (-b - Math.sqrt(Math.pow(b, 2) - 4 * a * c)) / (2 * a); // takes the farthest time in the future
@@ -107,12 +108,29 @@ const yVelocityFromAir = (
 /// Canvas variables
 let canvas, width, height, ctx;
 
+let X_ZERO, Y_ZERO; // variables to track the origin coordinates using canvas dimensions
+
+let floorColour = "black",
+   floorHeight = 80,
+   springBaseWidth = 20,
+   rampColour = "gray";
+
+let springWidthMax = 180,
+   springHeight = 48,
+   ballDiameter = springHeight;
+
+/// Initialize images
+let ballImage = new Image(),
+   springImage = new Image();
+ballImage.src = "images/ball.png";
+springImage.src = "images/spring.png"; // 1080px by 288px
+
 /// Listen for initial page load
 window.addEventListener(
    "load",
    () => {
-      updateInputs(true);
       loadCanvas();
+      updateInputs(true);
    },
    false
 );
@@ -157,8 +175,9 @@ function updateInputs(recomputeConstants) {
       calculateConstants();
    }
 
-   /// Update temporary data readout
+   /// Update the current state of the ball based on new constants and new time value
    computeValues();
+   drawToCanvas(); // TEMP
 }
 
 /// calculateConstants();
@@ -257,9 +276,6 @@ function calculateConstants() {
 
    /// Compute the sectionEndTimes
    computeSectionEndTimes();
-
-   console.log(sectionEndTimes);
-   console.log(accumulated);
 }
 
 /// computeValues();
@@ -495,4 +511,66 @@ function loadCanvas() {
    ctx.webkitImageSmoothingEnabled = false;
    ctx.msImageSmoothingEnabled = false;
    ctx.imageSmoothingEnabled = false;
+
+   /// Based on scaling of images/art, calculate the actual x = 0, y = 0
+   /// the ball's CENTER-BASE is drawn at (x,y) = (0,0)
+   /// though physics y-values increase upward, drawing y-values decrease upward
+   X_ZERO = springBaseWidth + springWidthMax;
+   Y_ZERO = height - floorHeight;
+}
+
+/// drawToCanvas()
+/// ~ draw all necessary elements on the canvas
+function drawToCanvas() {
+   ctx.clearRect(0, 0, width, height);
+   drawStaticElements();
+   drawDynamicElements();
+}
+
+/// drawStaticElements()
+/// ~ draw the static elements onto the canvas
+function drawStaticElements() {
+   ctx.fillStyle = floorColour;
+   ctx.beginPath();
+   ctx.rect(0, height - floorHeight, width, height); // floor
+   ctx.rect(
+      0,
+      height - (floorHeight + springHeight),
+      springBaseWidth,
+      springHeight
+   ); // spring base
+   ctx.fill();
+   ctx.fillStyle = rampColour;
+   ctx.beginPath();
+   let rampBaseX = X_ZERO + PIXELS_PER_METER * rampDistance;
+   let rampTopX =
+      rampBaseX +
+      PIXELS_PER_METER * Math.cos(makeRadian(rampAngle)) * rampLength;
+   let rampTopY =
+      Y_ZERO - PIXELS_PER_METER * Math.sin(makeRadian(rampAngle)) * rampLength;
+   ctx.moveTo(rampBaseX, Y_ZERO);
+   ctx.lineTo(rampTopX, rampTopY);
+   ctx.lineTo(rampTopX, Y_ZERO);
+   ctx.fill();
+}
+
+/// drawDynamicElements()
+/// ~ draw the dynamic elements of the ball and spring
+function drawDynamicElements() {
+   ctx.beginPath();
+   /// The ball's CENTER BASE is drawn at its (x,y)
+   ctx.drawImage(
+      ballImage,
+      X_ZERO + PIXELS_PER_METER * blockPositionX - ballDiameter / 2,
+      Y_ZERO - PIXELS_PER_METER * blockPositionY - ballDiameter,
+      ballDiameter,
+      ballDiameter
+   );
+   ctx.drawImage(
+      springImage,
+      springBaseWidth,
+      height - (floorHeight + springHeight),
+      springWidthMax + PIXELS_PER_METER * Math.min(0, blockPositionX),
+      springHeight
+   );
 }
