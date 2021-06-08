@@ -1,5 +1,3 @@
-/// When friction = 0, the times get messed up => why?
-
 /// Declare Input Variables
 let blockMass,
    springConstant,
@@ -12,7 +10,6 @@ const gravAcceleration = 9.8;
 const rampDistance = 10; // arbitrary ramp distance away from spring equilibrium
 const rampLength = 5; // Arbitrary diagonal ramp length (hypotenuse)
 const makeRadian = (angle) => (Math.PI * angle) / 180;
-const floatErrorMargin = Math.pow(10, -8);
 
 /// Initialize Simulation Variables
 let time;
@@ -270,8 +267,13 @@ function computeSectionEndTimes() {
    if (accumulated.fromSurface.velocityX <= 0) {
       // block stops
       sectionEndTimes.surface = Number.MAX_SAFE_INTEGER;
+   } else if (coefficientKineticFriction == 0) {
+      // block maintains velocity from no friction
+      sectionEndTimes.surface =
+         sectionEndTimes.spring +
+         rampDistance / accumulated.fromSurface.velocityX;
    } else {
-      // block experiences no friction, or slows a bit, calculate time with slowdown rate
+      // block slows a bit due to friction
       sectionEndTimes.surface =
          sectionEndTimes.spring +
          (accumulated.fromSurface.velocityX -
@@ -449,7 +451,10 @@ function computeEnergy() {
 /// ~ calculate the forces experienced by the block
 function computeForces() {
    forceGravity = blockMass * gravAcceleration;
-   forceNormal = forceGravity * Math.cos(makeRadian(blockAngle));
+   forceNormal =
+      time < sectionEndTimes.ramp
+         ? forceGravity * Math.cos(makeRadian(blockAngle))
+         : 0;
    forceSpring = springConstant * currentSpringDisplacement;
    forceFriction =
       time >= sectionEndTimes.spring &&
