@@ -10,7 +10,8 @@ const dirUp = 90,
    dirDown = 270,
    dirLeft = 180,
    dirRight = 0;
-const DECIMAL_PLACES = 3,
+const SECOND_MS = 1000,
+   DECIMAL_PLACES = 3,
    PIXELS_PER_METER = 6,
    PIXELS_PER_NEWTON = 0.5;
 const gravAcceleration = 9.8;
@@ -21,7 +22,12 @@ const quadraticFormula = (a, b, c) =>
    (-b - Math.sqrt(Math.pow(b, 2) - 4 * a * c)) / (2 * a); // takes the farthest time in the future
 
 /// Initialize Simulation Variables
-let time;
+let time,
+   playing = false,
+   playingInterval = null,
+   playIncrement = 0.01,
+   timeStep = 0;
+
 const sectionEndTimes = {
    // new section starts if time >= sectionEndTimes.<the previous one>
    spring: 0,
@@ -211,17 +217,23 @@ function updateInputs(recomputeConstants) {
       "display-coefficient-kinetic-friction"
    ).innerHTML = `${coefficientKineticFriction}`;
 
-   time = parseFloat(document.getElementById("time").value);
-   document.getElementById("display-time").innerHTML = `${time}`;
-
    /// Calculate Constants
    if (recomputeConstants) {
       calculateConstants();
+
+      /// Reset time
+      time = 0;
    }
 
-   /// Update the current state of the ball based on new constants and new time value
+   /// Compute values and draw frame
+   handleFrame();
+}
+
+/// handleFrame();
+/// ~ compute the values for a frame and draw it
+function handleFrame() {
    computeValues();
-   drawToCanvas(); // TEMP
+   drawToCanvas();
 }
 
 /// calculateConstants();
@@ -335,10 +347,51 @@ function calculateConstants() {
 
    /// Compute the sectionEndTimes
    computeSectionEndTimes();
+}
 
-   /// Adjust the time-input value to max out upon landing
-   document.getElementById("time").max =
-      sectionEndTimes.air || sectionEndTimes.ramp || sectionEndTimes.surface;
+/// playPause();
+/// ~ play and pause the simulation
+function playPause() {
+   playing = !playing;
+   document.getElementById("play-pause").innerHTML = playing
+      ? "Press to Pause"
+      : "Press to Play";
+   if (playing)
+      playingInterval = setInterval(() => {
+         time = Math.min(time + playIncrement, getMaxTime());
+         handleFrame();
+      }, SECOND_MS * playIncrement);
+   else clearInterval(playingInterval);
+}
+
+/// reset();
+/// ~ reset the simulation while maintaing current inputs
+function reset() {
+   time = 0;
+   handleFrame();
+}
+
+/// updateTimeStep();
+/// ~ retrieve manual time step value
+function updateTimeStep() {
+   var stepInput = document.getElementById("time-step").value;
+   if (!isNaN(stepInput)) {
+      timeStep = parseFloat(stepInput);
+   } else alert("Please input a valid number for the manual time step");
+}
+
+/// step(direction);
+/// direction (number) (-1 || 1): which direction to step through time
+/// ~ manually increment/decrement time
+function step(direction) {
+   if (playing) playPause();
+
+   if (!isNaN(timeStep)) {
+      if (direction < 0) time = Math.max(0, time - timeStep);
+      if (direction > 0) time = Math.min(time + timeStep, getMaxTime());
+   }
+
+   handleFrame();
 }
 
 /// computeValues();
@@ -395,6 +448,14 @@ function computeSectionEndTimes() {
       sectionEndTimes.ramp +
       (accumulated.onLanding.positionX - accumulated.fromRamp.positionX) /
          accumulated.onLanding.velocityX;
+}
+
+/// getMaxTime();
+/// ~ returns the end time of the last valid section the ball goes through
+function getMaxTime() {
+   return (
+      sectionEndTimes.air || sectionEndTimes.ramp || sectionEndTimes.surface
+   );
 }
 
 /// computeBlockValues();
@@ -481,7 +542,8 @@ function computeBlockValues() {
          downRampNetYAcceleration,
          accumulated.onEnteringRamp.velocityY
       );
-   } else if (time < sectionEndTimes.air) {
+   } else {
+      // In the air until simulation ends
       // Air
 
       // blockVelocityX constant in section
@@ -783,16 +845,16 @@ function printReadout() {
    // For energy/velocity readouts
    var readouts = [
       ``,
+      `Time: ${round(time)} s`,
+      ``,
       `X-Velocity: ${round(blockVelocityX)} m/s`,
       `Y-Velocity: ${round(blockVelocityY)} m/s`,
-      `X-Position: ${round(blockPositionX)} m`,
-      `Y-Position: ${round(blockPositionY)} m`, // TEMP
       ``,
-      `Maximum System Energy: ${Math.abs(round(maximumSystemEnergy))} J`,
-      `Spring Potential Energy: ${Math.abs(round(springPotentialEnergy))} J`,
-      `Ball Kinetic Energy: ${Math.abs(round(blockKineticEnergy))} J`,
-      `Ball Potential Energy: ${Math.abs(round(blockPotentialEnergy))} J`,
-      `Energy Lost to Friction: ${Math.abs(round(energyLostToFriction))} J`,
+      `Maximum System Energy: ${round(Math.abs(maximumSystemEnergy))} J`,
+      `Spring Potential Energy: ${round(Math.abs(springPotentialEnergy))} J`,
+      `Ball Kinetic Energy: ${round(Math.abs(blockKineticEnergy))} J`,
+      `Ball Potential Energy: ${round(Math.abs(blockPotentialEnergy))} J`,
+      `Energy Lost to Friction: ${round(Math.abs(energyLostToFriction))} J`,
    ];
 
    readouts.forEach((message) => {
