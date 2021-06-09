@@ -13,7 +13,7 @@ const dirUp = 90,
 const SECOND_MS = 1000,
    DECIMAL_PLACES = 5,
    PIXELS_PER_METER = 6,
-   PIXELS_PER_NEWTON = 0.5;
+   PIXELS_PER_NEWTON = 0.7;
 const gravAcceleration = 9.8;
 const rampDistance = 30; // arbitrary ramp distance away from spring equilibrium
 const rampLength = 15; // arbitrary diagonal ramp length (hypotenuse)
@@ -356,6 +356,7 @@ function playPause() {
    if (playing)
       playingInterval = setInterval(() => {
          time = Math.min(time + playIncrement, getMaxTime());
+         if (time == getMaxTime()) playPause();
          handleFrame();
       }, SECOND_MS * playIncrement);
    else clearInterval(playingInterval);
@@ -471,7 +472,6 @@ function computeBlockValues() {
    blockPositionY = 0;
    blockVelocityX = 0;
    blockVelocityY = 0;
-   blockAngle = 0;
 
    // Based on the sections which have fully elapsed, add accumulated state values
    if (time >= sectionEndTimes.spring) {
@@ -495,6 +495,8 @@ function computeBlockValues() {
    /// Based on current section, calculate in-section state values
    if (time < sectionEndTimes.spring) {
       // Spring
+      blockAngle = 0;
+
       blockVelocityX += xVelocityFromSpring(
          time,
          compressionDistance,
@@ -507,6 +509,8 @@ function computeBlockValues() {
       );
    } else if (time < sectionEndTimes.surface) {
       // Surface
+      blockAngle = 0;
+
       blockVelocityX += xVelocityFromSurface(
          sectionEndTimes.spring,
          time,
@@ -607,8 +611,12 @@ function computeForces() {
    forceGravity.setMagnitude(blockMass * gravAcceleration);
 
    forceNormal.setMagnitude(
-      time < sectionEndTimes.ramp
-         ? forceGravity.magnitude * Math.cos(makeRadian(blockAngle))
+      time < sectionEndTimes.ramp ||
+         (time == sectionEndTimes.ramp && getMaxTime() <= sectionEndTimes.ramp)
+         ? forceGravity.magnitude *
+              Math.cos(
+                 makeRadian(time > sectionEndTimes.surface ? rampAngle : 0)
+              )
          : 0
    );
    forceNormal.setDirection(dirUp + blockAngle);
@@ -653,6 +661,7 @@ function drawToCanvas() {
    drawStaticElements();
    drawDynamicElements();
    drawFreeBodyDiagram();
+   printReadout();
 }
 
 /// drawStaticElements()
@@ -741,18 +750,19 @@ function drawDynamicElements() {
 /// drawFreeBodyDiagram();
 /// ~ draw a free body diagram of the ball
 function drawFreeBodyDiagram() {
-   ctx.drawImage(
-      ballImage,
-      xFBD - ballDiameterFBD / 2,
-      yFBD - ballDiameterFBD / 2,
-      ballDiameterFBD,
-      ballDiameterFBD
-   );
-   drawForceArrow(xFBD, yFBD, forceGravity);
-   drawForceArrow(xFBD, yFBD, forceNormal);
-   drawForceArrow(xFBD, yFBD, forceSpring);
-   drawForceArrow(xFBD, yFBD, forceFriction);
-   printReadout();
+   if (time < getMaxTime()) {
+      ctx.drawImage(
+         ballImage,
+         xFBD - ballDiameterFBD / 2,
+         yFBD - ballDiameterFBD / 2,
+         ballDiameterFBD,
+         ballDiameterFBD
+      );
+      drawForceArrow(xFBD, yFBD, forceGravity);
+      drawForceArrow(xFBD, yFBD, forceNormal);
+      drawForceArrow(xFBD, yFBD, forceSpring);
+      drawForceArrow(xFBD, yFBD, forceFriction);
+   }
 }
 
 /// drawForceArrow();
@@ -834,22 +844,30 @@ function printReadout() {
    writeText(
       forceGravity.colour,
       numLines++,
-      `Force of Gravity: ${round(forceGravity.magnitude)} N`
+      time < getMaxTime()
+         ? `Force of Gravity: ${round(forceGravity.magnitude)} N`
+         : `Force of Gravity: SIMULATION COMPLETE`
    );
    writeText(
       forceNormal.colour,
       numLines++,
-      `Normal Force: ${round(forceNormal.magnitude)} N`
+      time < getMaxTime()
+         ? `Normal Force: ${round(forceNormal.magnitude)} N`
+         : `Normal Force: SIMULATION COMPLETE`
    );
    writeText(
       forceSpring.colour,
       numLines++,
-      `Spring Force: ${round(forceSpring.magnitude)} N`
+      time < getMaxTime()
+         ? `Spring Force: ${round(forceSpring.magnitude)} N`
+         : `Spring Force: SIMULATION COMPLETE`
    );
    writeText(
       forceFriction.colour,
       numLines++,
-      `Force of Friction: ${round(forceFriction.magnitude)} N`
+      time < getMaxTime()
+         ? `Force of Friction: ${round(forceFriction.magnitude)} N`
+         : `Force of Friction: SIMULATION COMPLETE`
    );
 
    // For energy/velocity readouts
