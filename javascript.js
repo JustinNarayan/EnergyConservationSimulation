@@ -16,10 +16,10 @@ const SECOND_MS = 1000,
    PIXELS_PER_NEWTON = 0.5;
 const gravAcceleration = 9.8;
 const rampDistance = 30; // arbitrary ramp distance away from spring equilibrium
-const rampLength = 15; // Arbitrary diagonal ramp length (hypotenuse)
+const rampLength = 15; // arbitrary diagonal ramp length (hypotenuse)
 const makeRadian = (angle) => (Math.PI * angle) / 180;
 const quadraticFormula = (a, b, c) =>
-   (-b - Math.sqrt(Math.pow(b, 2) - 4 * a * c)) / (2 * a); // takes the farthest time in the future
+   (-b - Math.sqrt(Math.pow(b, 2) - 4 * a * c)) / (2 * a); // solves for the farthest time in the future
 
 /// Initialize Simulation Variables
 let time,
@@ -141,12 +141,12 @@ let forceGravity = new Force("darkviolet", dirDown),
 /// Canvas variables
 let canvas, width, height, ctx;
 
-let X_ZERO, Y_ZERO; // variables to track the origin coordinates using canvas dimensions
+let X_ZERO, Y_ZERO; // variables to track the ball's kinematics origin coordinates using canvas dimensions
 
 const floorColour = "black",
    floorHeight = 80,
    floorDistanceMarkingsSpacing = 20, // in meters
-   floorDistanceMarkingsLength = 48, // in pixels
+   floorDistanceMarkingsLength = 48, // in pixels, how far down to draw the white line
    floorDistanceMarkingsColour = "white",
    floorDistanceMarkingsWidth = 2,
    springBaseWidth = 20,
@@ -173,7 +173,7 @@ const xText = 8,
 const ballImage = new Image(),
    springImage = new Image();
 ballImage.src = "images/ball.png";
-springImage.src = "images/spring.png"; // 1080px by 288px
+springImage.src = "images/spring.png"; // 676px by 286px
 
 /// Listen for initial page load
 window.addEventListener(
@@ -240,7 +240,7 @@ function calculateConstants() {
    /// Compute the relevant spring variables
    computeSpringValues();
 
-   /// Compute constant acceleration
+   /// Compute all relevant acceleration values
    generalFrictionalAcceleration =
       -1 * coefficientKineticFriction * gravAcceleration;
    downRampFrictionalAcceleration =
@@ -274,7 +274,7 @@ function calculateConstants() {
    accumulated.fromSurface = {
       positionX: 0, // Temp value to be adjusted below using velocity value
       velocityX: Math.max(
-         0, // in case, friction halts block before ramp
+         0, // in case friction halts block before ramp
          Math.sqrt(
             Math.pow(accumulated.fromSpring.velocityX, 2) +
                2 * generalFrictionalAcceleration * rampDistance
@@ -297,7 +297,7 @@ function calculateConstants() {
       positionX: 0,
       positionY: 0,
       velocityX: Math.max(
-         0, // in case, friction halts block before ramp
+         0, // in case friction halts block before ramp
          Math.sqrt(
             Math.pow(accumulated.onEnteringRamp.velocityX, 2) +
                2 *
@@ -334,7 +334,7 @@ function calculateConstants() {
                accumulated.fromRamp.velocityY,
                accumulated.fromRamp.positionY
             ),
-      positionY: 0,
+      positionY: 0, // hits the ground
       velocityX: accumulated.fromRamp.velocityX,
       velocityY: -Math.sqrt(
          Math.pow(accumulated.fromRamp.velocityY, 2) +
@@ -416,7 +416,6 @@ function computeValues() {
 /// computeSpringValues();
 /// ~ calculate the spring period, angular frequnecy ω, and duration of contact with block
 function computeSpringValues() {
-   // Calculate the period of the spring, angular frequency ω, and the duration of time the block is in contact
    angularFrequency = Math.sqrt(springConstant / blockMass);
    springPeriod = (2 * Math.PI) / angularFrequency;
    springTimeToEquilibrium = springPeriod / 4; // how long the block is touching
@@ -428,7 +427,7 @@ function computeSectionEndTimes() {
    // Spring always executes 1/4 of a period
    sectionEndTimes.spring = springTimeToEquilibrium;
 
-   // On surface, block may experience friction, no friction, or stop entirely
+   // On surface, block may slow from friction, experience no friction, or stop entirely
    if (coefficientKineticFriction == 0) {
       // block maintains velocity from no friction
       sectionEndTimes.surface =
@@ -449,7 +448,7 @@ function computeSectionEndTimes() {
       (accumulated.fromRamp.velocityX - accumulated.onEnteringRamp.velocityX) /
          downRampNetXAcceleration;
 
-   // In air, block experiences only gravitational acceleration, calculate time from x-distanced travelled at constant velocity in air
+   // In air, block experiences only gravitational acceleration, calculate time from x-distance travelled at constant velocity in air
    sectionEndTimes.air =
       sectionEndTimes.ramp +
       (accumulated.onLanding.positionX - accumulated.fromRamp.positionX) /
@@ -474,7 +473,7 @@ function computeBlockValues() {
    blockVelocityY = 0;
    blockAngle = 0;
 
-   // Based on the sections which have fully elapsed, calculate accumulated state values
+   // Based on the sections which have fully elapsed, add accumulated state values
    if (time >= sectionEndTimes.spring) {
       // After the surface
       blockPositionX = accumulated.fromSpring.positionX;
@@ -661,16 +660,19 @@ function drawToCanvas() {
 function drawStaticElements() {
    ctx.fillStyle = floorColour;
    ctx.beginPath();
-   ctx.rect(0, height - floorHeight, width, height); // floor
+   // floor
+   ctx.rect(0, height - floorHeight, width, height);
+   // spring base
    ctx.rect(
       0,
       height - (floorHeight + springHeight),
       springBaseWidth,
       springHeight
-   ); // spring base
+   );
    ctx.fill();
    ctx.fillStyle = rampColour;
    ctx.beginPath();
+   // ramp
    let rampBaseX = X_ZERO + PIXELS_PER_METER * rampDistance;
    let rampTopX =
       rampBaseX +
@@ -690,6 +692,7 @@ function drawStaticElements() {
    ) {
       ctx.fillStyle = floorDistanceMarkingsColour;
       ctx.beginPath();
+      // draws rectangle into floor to mark distance
       ctx.moveTo(i - floorDistanceMarkingsWidth / 2, height - floorHeight);
       ctx.lineTo(
          i - floorDistanceMarkingsWidth / 2,
@@ -702,6 +705,7 @@ function drawStaticElements() {
       ctx.lineTo(i + floorDistanceMarkingsWidth / 2, height - floorHeight);
       ctx.fill();
 
+      // writes distance
       var distance = (i - X_ZERO) / PIXELS_PER_METER;
       var textLeftSpacing = 8;
       ctx.font = textFont;
@@ -756,7 +760,7 @@ function drawFreeBodyDiagram() {
 function drawForceArrow(xFrom, yFrom, force) {
    if (!force.magnitude) return;
 
-   // Account for all angled forces
+   // Account for the angling of forces using trig
    let oppOffset = Math.sin(makeRadian(force.direction));
    let adjOffset = Math.cos(makeRadian(force.direction));
 

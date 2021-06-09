@@ -7,12 +7,10 @@
 <body>
    <div id="title">Energy Conservation Simulation</div>
    <div id="description">
-      <span id="name">By Justin Narayan for SPH4U</span>
-      <br /><br />
       <div>Description</div>
       This physics simulation demonstrates the conservation of mechanical
       energy. The initial potential energy of the system present in the spring
-      is converted to the kinetic and potential energy of the sliding ball as
+      is converted into the kinetic and potential energy of the sliding ball as
       well as lost due to friction between the ball and the ground/ramp
       throughout the course of the simulation. A free-body-diagram of all forces
       acting on the ball is also presented.<br /><br />
@@ -32,6 +30,8 @@
       demonstrate how these values impact the system.<br /><br />
       Users can allow the system to play in real time or choose to pause and
       step through the simulation in discrete increments.
+      <br /><br />
+      <span id="name">By Justin Narayan for SPH4U</span>
    </div>
    <div id="inputs-section">
       <div onchange="updateInputs();">
@@ -101,7 +101,6 @@
 
       <br />
 
-      <!-- Inputs which do not require recalculation of simulation constants-->
       <div>
          <button id="play-pause" onclick="playPause();">Press to Play</button>
          <button id="reset" onclick="reset();">Reset Time</button>
