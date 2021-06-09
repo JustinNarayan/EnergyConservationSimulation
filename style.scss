@@ -1,4 +1,8 @@
-canvas {
-   border: 2px solid black;
-   margin: 15px;
+#scroll-canvas {
+   overflow: scroll;
+   width: 1080px;
+   canvas {
+      border: 2px solid black;
+      margin: 15px;
+   }
 }

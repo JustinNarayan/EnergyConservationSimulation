@@ -10,10 +10,11 @@ const dirUp = 90,
    dirDown = 270,
    dirLeft = 180,
    dirRight = 0;
-const PIXELS_PER_METER = 6,
+const DECIMAL_PLACES = 3,
+   PIXELS_PER_METER = 6,
    PIXELS_PER_NEWTON = 0.5;
 const gravAcceleration = 9.8;
-const rampDistance = 15; // arbitrary ramp distance away from spring equilibrium
+const rampDistance = 30; // arbitrary ramp distance away from spring equilibrium
 const rampLength = 15; // Arbitrary diagonal ramp length (hypotenuse)
 const makeRadian = (angle) => (Math.PI * angle) / 180;
 const quadraticFormula = (a, b, c) =>
@@ -138,19 +139,29 @@ let X_ZERO, Y_ZERO; // variables to track the origin coordinates using canvas di
 
 const floorColour = "black",
    floorHeight = 80,
+   floorDistanceMarkingsSpacing = 20, // in meters
+   floorDistanceMarkingsLength = 48, // in pixels
+   floorDistanceMarkingsColour = "white",
+   floorDistanceMarkingsWidth = 2,
    springBaseWidth = 20,
    rampColour = "gray";
 
-const springWidthMax = 180,
-   springHeight = 48,
+const springWidthMax = 120,
+   springHeight = 40,
    ballDiameter = springHeight;
 
-const xFBD = 120,
-   yFBD = 120,
+const xFBD = 320,
+   yFBD = 76,
    ballDiameterFBD = 24,
    forceArrowRectWidth = 3,
    forceArrowTipWidth = 12,
    forceArrowTipHeight = 12;
+
+const xText = 8,
+   yText = 46,
+   textColour = "black",
+   lineSize = "24",
+   textFont = "16px Helvetica";
 
 /// Initialize images
 const ballImage = new Image(),
@@ -309,6 +320,9 @@ function calculateConstants() {
 
    /// Compute the sectionEndTimes
    computeSectionEndTimes();
+
+   /// Adjust the time-input value to max out upon landing
+   document.getElementById("time").max = sectionEndTimes.air;
 }
 
 /// computeValues();
@@ -593,6 +607,36 @@ function drawStaticElements() {
    ctx.lineTo(rampTopX, rampTopY);
    ctx.lineTo(rampTopX, Y_ZERO);
    ctx.fill();
+
+   // Draw floor distance markings
+   for (
+      var i = X_ZERO - floorDistanceMarkingsSpacing * PIXELS_PER_METER; // starts at -20
+      i < width;
+      i += floorDistanceMarkingsSpacing * PIXELS_PER_METER
+   ) {
+      ctx.fillStyle = floorDistanceMarkingsColour;
+      ctx.beginPath();
+      ctx.moveTo(i - floorDistanceMarkingsWidth / 2, height - floorHeight);
+      ctx.lineTo(
+         i - floorDistanceMarkingsWidth / 2,
+         height - floorHeight + floorDistanceMarkingsLength
+      );
+      ctx.lineTo(
+         i + floorDistanceMarkingsWidth / 2,
+         height - floorHeight + floorDistanceMarkingsLength
+      );
+      ctx.lineTo(i + floorDistanceMarkingsWidth / 2, height - floorHeight);
+      ctx.fill();
+
+      var distance = (i - X_ZERO) / PIXELS_PER_METER;
+      var textLeftSpacing = 8;
+      ctx.font = textFont;
+      ctx.fillText(
+         `${distance} m`,
+         i + textLeftSpacing,
+         height - floorHeight + floorDistanceMarkingsLength
+      );
+   }
 }
 
 /// drawDynamicElements()
@@ -630,6 +674,7 @@ function drawFreeBodyDiagram() {
    drawForceArrow(xFBD, yFBD, forceNormal);
    drawForceArrow(xFBD, yFBD, forceSpring);
    drawForceArrow(xFBD, yFBD, forceFriction);
+   printReadout();
 }
 
 /// drawForceArrow();
@@ -700,4 +745,62 @@ function drawForceArrow(xFrom, yFrom, force) {
       yFrom + forceArrowRectWidth * adjOffset
    );
    ctx.fill();
+}
+
+/// printReadout();
+/// ~ give a readout for statistics in the simulation
+function printReadout() {
+   var numLines = 0;
+   ctx.font = textFont;
+   // For forces, use each colour
+   writeText(
+      forceGravity.colour,
+      numLines++,
+      `Force of Gravity: ${round(forceGravity.magnitude)} N`
+   );
+   writeText(
+      forceNormal.colour,
+      numLines++,
+      `Normal Force: ${round(forceNormal.magnitude)} N`
+   );
+   writeText(
+      forceSpring.colour,
+      numLines++,
+      `Spring Force: ${round(forceSpring.magnitude)} N`
+   );
+   writeText(
+      forceFriction.colour,
+      numLines++,
+      `Force of Friction: ${round(forceFriction.magnitude)} N`
+   );
+
+   // For energy/velocity readouts
+   var readouts = [
+      `X-Velocity: ${round(blockVelocityX)} m/s`,
+      `Y-Velocity: ${round(blockVelocityY)} m/s`,
+      ``,
+      `Maximum System Energy: ${Math.abs(round(maximumSystemEnergy))} J`,
+      `Spring Potential Energy: ${Math.abs(round(springPotentialEnergy))} J`,
+      `Ball Kinetic Energy: ${Math.abs(round(blockKineticEnergy))} J`,
+      `Ball Potential Energy: ${Math.abs(round(blockPotentialEnergy))} J`,
+      `Energy Lost to Friction: ${Math.abs(round(energyLostToFriction))} J`,
+   ];
+
+   readouts.forEach((message) => {
+      writeText(textColour, numLines++, message);
+   });
+}
+
+/// writeText();
+/// ~ write text of a certain colour for the readouts
+function writeText(colour, numLines, text) {
+   ctx.fillStyle = colour;
+   ctx.fillText(text, xText, yText + numLines * lineSize);
+}
+
+/// round(num);
+/// num (number) : the value to round
+/// ~ return a number to a fixed number of decimal places
+function round(num) {
+   return num.toFixed(DECIMAL_PLACES);
 }
