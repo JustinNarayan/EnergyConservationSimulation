@@ -153,9 +153,9 @@ const springWidthMax = 120,
 const xFBD = 320,
    yFBD = 76,
    ballDiameterFBD = 24,
-   forceArrowRectWidth = 3,
-   forceArrowTipWidth = 12,
-   forceArrowTipHeight = 12;
+   forceArrowRectWidth = 1.5,
+   forceArrowTipWidth = 8,
+   forceArrowTipHeight = 6;
 
 const xText = 8,
    yText = 46,
@@ -261,8 +261,9 @@ function calculateConstants() {
          angularFrequency
       ),
    };
+
    accumulated.fromSurface = {
-      positionX: rampDistance, // use the max possible, as time calcs use velocity
+      positionX: 0, // Temp value to be adjusted below using velocity value
       velocityX: Math.max(
          0, // in case, friction halts block before ramp
          Math.sqrt(
@@ -271,17 +272,21 @@ function calculateConstants() {
          ) || 0
       ), // (v-final)^2 = (v-initial)^2 + 2(displacement) => || 0 if NaN
    };
+   accumulated.fromSurface.positionX =
+      (Math.pow(accumulated.fromSurface.velocityX, 2) -
+         Math.pow(accumulated.fromSpring.velocityX, 2)) /
+         (2 * generalFrictionalAcceleration) || rampDistance;
+
    accumulated.onEnteringRamp = {
       velocityX:
          accumulated.fromSurface.velocityX * Math.cos(makeRadian(rampAngle)),
       velocityY:
          accumulated.fromSurface.velocityX * Math.sin(makeRadian(rampAngle)),
    };
+
    accumulated.fromRamp = {
-      positionX:
-         accumulated.fromSurface.positionX +
-         rampLength * Math.cos(makeRadian(rampAngle)), // use the max possible, the accumulated velocity values truly reflect the end state of the block
-      positionY: rampLength * Math.sin(makeRadian(rampAngle)),
+      positionX: 0,
+      positionY: 0,
       velocityX: Math.max(
          0, // in case, friction halts block before ramp
          Math.sqrt(
@@ -301,6 +306,16 @@ function calculateConstants() {
          ) || 0
       ),
    };
+   accumulated.fromRamp.positionX =
+      accumulated.fromSurface.positionX +
+      (Math.pow(accumulated.fromRamp.velocityX, 2) -
+         Math.pow(accumulated.onEnteringRamp.velocityX, 2)) /
+         (2 * downRampNetXAcceleration);
+   accumulated.fromRamp.positionY =
+      (Math.pow(accumulated.fromRamp.velocityY, 2) -
+         Math.pow(accumulated.onEnteringRamp.velocityY, 2)) /
+      (2 * downRampNetYAcceleration);
+
    accumulated.onLanding = {
       positionX:
          accumulated.fromRamp.positionX +
@@ -322,7 +337,8 @@ function calculateConstants() {
    computeSectionEndTimes();
 
    /// Adjust the time-input value to max out upon landing
-   document.getElementById("time").max = sectionEndTimes.air;
+   document.getElementById("time").max =
+      sectionEndTimes.air || sectionEndTimes.ramp || sectionEndTimes.surface;
 }
 
 /// computeValues();
@@ -354,16 +370,13 @@ function computeSectionEndTimes() {
    sectionEndTimes.spring = springTimeToEquilibrium;
 
    // On surface, block may experience friction, no friction, or stop entirely
-   if (accumulated.fromSurface.velocityX <= 0) {
-      // block stops
-      sectionEndTimes.surface = Number.MAX_SAFE_INTEGER;
-   } else if (coefficientKineticFriction == 0) {
+   if (coefficientKineticFriction == 0) {
       // block maintains velocity from no friction
       sectionEndTimes.surface =
          sectionEndTimes.spring +
          rampDistance / accumulated.fromSurface.velocityX;
    } else {
-      // block slows a bit due to friction
+      // block slows or stops due to friction
       sectionEndTimes.surface =
          sectionEndTimes.spring +
          (accumulated.fromSurface.velocityX -
@@ -372,17 +385,10 @@ function computeSectionEndTimes() {
    }
 
    // On ramp, block may stop from friction/PE, stop from PE, exit with KE after friction/PE, or exit with KE after only PE
-   if (accumulated.fromRamp.velocityX <= 0 /* or velocityY, its arbitrary */) {
-      // block stops from PE / PE and friction
-      sectionEndTimes.ramp = Number.MAX_SAFE_INTEGER;
-   } else {
-      // block slows from PE or PE + friction, calculate time with slowdown rate for X or Y
-      sectionEndTimes.ramp =
-         sectionEndTimes.surface +
-         (accumulated.fromRamp.velocityX -
-            accumulated.onEnteringRamp.velocityX) /
-            downRampNetXAcceleration;
-   }
+   sectionEndTimes.ramp =
+      sectionEndTimes.surface +
+      (accumulated.fromRamp.velocityX - accumulated.onEnteringRamp.velocityX) /
+         downRampNetXAcceleration;
 
    // In air, block experiences only gravitational acceleration, calculate time from x-distanced travelled at constant velocity in air
    sectionEndTimes.air =
@@ -776,8 +782,11 @@ function printReadout() {
 
    // For energy/velocity readouts
    var readouts = [
+      ``,
       `X-Velocity: ${round(blockVelocityX)} m/s`,
       `Y-Velocity: ${round(blockVelocityY)} m/s`,
+      `X-Position: ${round(blockPositionX)} m`,
+      `Y-Position: ${round(blockPositionY)} m`, // TEMP
       ``,
       `Maximum System Energy: ${Math.abs(round(maximumSystemEnergy))} J`,
       `Spring Potential Energy: ${Math.abs(round(springPotentialEnergy))} J`,
