@@ -374,10 +374,13 @@ function reset() {
 /// updateTimeStep();
 /// ~ retrieve manual time step value
 function updateTimeStep() {
-   var stepInput = document.getElementById("time-step").value;
-   if (!isNaN(stepInput)) {
-      timeStep = parseFloat(stepInput);
-   } else alert("Please input a valid number for the manual time step");
+   var stepInput = document.getElementById("time-step");
+   if (!isNaN(stepInput.value) && stepInput.value > 0) {
+      timeStep = Math.abs(parseFloat(stepInput.value));
+   } else {
+      alert("Please input a valid positive number for the manual time step");
+      stepInput.value = timeStep;
+   }
 }
 
 /// step(direction);
@@ -387,6 +390,12 @@ function step(direction) {
    if (playing) playPause();
 
    if (!isNaN(timeStep)) {
+      if (timeStep == 0) {
+         alert(
+            "Your current manual time step is 0 seconds, please input a valid positive number."
+         );
+         return;
+      }
       if (direction < 0) time = Math.max(0, time - timeStep);
       if (direction > 0) time = Math.min(time + timeStep, getMaxTime());
    }
