@@ -11,7 +11,7 @@ const dirUp = 90,
    dirLeft = 180,
    dirRight = 0;
 const SECOND_MS = 1000,
-   DECIMAL_PLACES = 3,
+   DECIMAL_PLACES = 5,
    PIXELS_PER_METER = 6,
    PIXELS_PER_NEWTON = 0.5;
 const gravAcceleration = 9.8;
@@ -180,15 +180,14 @@ window.addEventListener(
    "load",
    () => {
       loadCanvas();
-      updateInputs(true);
+      updateInputs();
    },
    false
 );
 
-/// updateInputs(recomputeConstants)
-/// recomputeConstants (boolean) : if the simulation's constants must be recomputed
+/// updateInputs()
 /// ~ read inputs from user, display numerical values, and update simulation
-function updateInputs(recomputeConstants) {
+function updateInputs() {
    /// Read Inputs
    blockMass = parseFloat(document.getElementById("block-mass").value);
    springConstant = parseFloat(
@@ -218,12 +217,10 @@ function updateInputs(recomputeConstants) {
    ).innerHTML = `${coefficientKineticFriction}`;
 
    /// Calculate Constants
-   if (recomputeConstants) {
-      calculateConstants();
+   calculateConstants();
 
-      /// Reset time
-      time = 0;
-   }
+   /// Reset time
+   time = 0;
 
    /// Compute values and draw frame
    handleFrame();
@@ -854,16 +851,22 @@ function printReadout() {
    // For energy/velocity readouts
    var readouts = [
       ``,
-      `Time: ${round(time)} s`,
+      `Time: ${round(time)} seconds ${
+         time >= getMaxTime() ? ` » SIMULATION COMPLETE ` : ``
+      }`,
       ``,
-      `X-Velocity: ${round(blockVelocityX)} m/s`,
-      `Y-Velocity: ${round(blockVelocityY)} m/s`,
+      `X-Velocity: ${round(blockVelocityX)} meters/second`,
+      `Y-Velocity: ${round(blockVelocityY)} meters/second`,
       ``,
-      `Maximum System Energy: ${round(Math.abs(maximumSystemEnergy))} J`,
-      `Spring Potential Energy: ${round(Math.abs(springPotentialEnergy))} J`,
-      `Ball Kinetic Energy: ${round(Math.abs(blockKineticEnergy))} J`,
-      `Ball Potential Energy: ${round(Math.abs(blockPotentialEnergy))} J`,
-      `Energy Lost to Friction: ${round(Math.abs(energyLostToFriction))} J`,
+      `Maximum System Energy: ${round(Math.abs(maximumSystemEnergy))} Joules`,
+      `Spring Potential Energy: ${round(
+         Math.abs(springPotentialEnergy)
+      )} Joules`,
+      `Ball Kinetic Energy: ${round(Math.abs(blockKineticEnergy))} Joules`,
+      `Ball Potential Energy: ${round(Math.abs(blockPotentialEnergy))} Joules`,
+      `Energy Lost to Friction: ${round(
+         Math.abs(energyLostToFriction)
+      )} Joules`,
    ];
 
    readouts.forEach((message) => {

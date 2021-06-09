@@ -1,8 +1,141 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600&display=swap");
+$font-stack: "Poppins", sans-serif;
+$background-col: beige;
+$title-box-col: burlywood;
+$desc-box-col: lighten($title-box-col, 10%);
+$inputs-box-col: lighten(mix(coral, $background-col, 70%), 7%);
+$button-col: darken(goldenrod, 5%);
+
+* {
+   box-sizing: none;
+   background-color: $background-col;
+   padding: 0px;
+   margin: 0px;
+   font-family: $font-stack;
+
+   align-items: center;
+   justify-content: center;
+   text-align: center;
+}
+
+#title {
+   font-size: 44px;
+   width: 80%;
+   height: 120px;
+   border-radius: 24px;
+   margin: 40px auto;
+   text-align: center;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   background-color: $title-box-col;
+   box-shadow: 0px 0px 10px 6px $title-box-col;
+}
+
+#description {
+   font-size: 15px;
+   padding: 20px 32px;
+   width: 64%;
+   height: auto;
+   border-radius: 24px;
+   margin: 20px auto;
+   text-align: center;
+   justify-content: center;
+   align-items: center;
+   background-color: $desc-box-col;
+   box-shadow: 0px 0px 6px 3px $desc-box-col;
+
+   div {
+      font-weight: bold;
+      font-size: 18px;
+      background-color: $desc-box-col;
+   }
+
+   span {
+      background-color: $desc-box-col;
+      font-style: italic;
+      font-size: 13px;
+   }
+}
+
+#inputs-section {
+   font-size: 15px;
+   padding: 16px 128px;
+   padding-bottom: 0px;
+   width: min-content;
+   height: auto;
+   border-radius: 24px;
+   margin: 20px auto;
+   text-align: center;
+   justify-content: center;
+   align-items: center;
+   background-color: $inputs-box-col;
+   box-shadow: 0px 0px 6px 3px $inputs-box-col;
+
+   div {
+      background-color: $inputs-box-col;
+      align-items: center;
+      justify-content: center;
+
+      p {
+         background-color: $inputs-box-col;
+         font-weight: bold;
+         margin-bottom: 2px;
+      }
+
+      span {
+         margin-left: 8px;
+         background-color: $inputs-box-col;
+         font-style: italic;
+         font-weight: normal;
+      }
+
+      input[type="range"] {
+         margin-bottom: 12px;
+         width: 356px;
+      }
+
+      input[type="number"] {
+         border: 1px solid black;
+         border-radius: 4px;
+         width: 292px;
+         height: 32px;
+         margin-left: auto;
+         margin-right: auto;
+         margin-bottom: 8px;
+         margin-top: 0px;
+      }
+
+      button {
+         width: 144px;
+         height: 32px;
+         border: 1px solid black;
+         border-radius: 4px;
+         display: inline;
+         margin-bottom: 8px;
+         background-color: $button-col;
+         color: white;
+         font-weight: 400;
+         font-size: 15px;
+      }
+   }
+}
+
 #scroll-canvas {
-   overflow: scroll;
+   overflow-x: scroll;
    width: 1080px;
+   padding: 0px;
+   margin: 0px;
+   border: 2px solid black;
+   text-align: center;
+   justify-content: center;
+   align-items: center;
+   margin-left: auto;
+   margin-right: auto;
+   margin-bottom: 48px;
    canvas {
-      border: 2px solid black;
-      margin: 15px;
+      background-color: white;
+      margin: 0px;
+      padding: 0px;
    }
 }

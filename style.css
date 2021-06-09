@@ -1,10 +1,127 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600&display=swap");
+* {
+  box-sizing: none;
+  background-color: beige;
+  padding: 0px;
+  margin: 0px;
+  font-family: "Poppins", sans-serif;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+#title {
+  font-size: 44px;
+  width: 80%;
+  height: 120px;
+  border-radius: 24px;
+  margin: 40px auto;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: burlywood;
+  box-shadow: 0px 0px 10px 6px burlywood;
+}
+
+#description {
+  font-size: 15px;
+  padding: 20px 32px;
+  width: 64%;
+  height: auto;
+  border-radius: 24px;
+  margin: 20px auto;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  background-color: #e9d0af;
+  box-shadow: 0px 0px 6px 3px #e9d0af;
+}
+#description div {
+  font-weight: bold;
+  font-size: 18px;
+  background-color: #e9d0af;
+}
+#description span {
+  background-color: #e9d0af;
+  font-style: italic;
+  font-size: 13px;
+}
+
+#inputs-section {
+  font-size: 15px;
+  padding: 16px 128px;
+  padding-bottom: 0px;
+  width: min-content;
+  height: auto;
+  border-radius: 24px;
+  margin: 20px auto;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  background-color: #fdba9d;
+  box-shadow: 0px 0px 6px 3px #fdba9d;
+}
+#inputs-section div {
+  background-color: #fdba9d;
+  align-items: center;
+  justify-content: center;
+}
+#inputs-section div p {
+  background-color: #fdba9d;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+#inputs-section div span {
+  margin-left: 8px;
+  background-color: #fdba9d;
+  font-style: italic;
+  font-weight: normal;
+}
+#inputs-section div input[type=range] {
+  margin-bottom: 12px;
+  width: 356px;
+}
+#inputs-section div input[type=number] {
+  border: 1px solid black;
+  border-radius: 4px;
+  width: 292px;
+  height: 32px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 8px;
+  margin-top: 0px;
+}
+#inputs-section div button {
+  width: 144px;
+  height: 32px;
+  border: 1px solid black;
+  border-radius: 4px;
+  display: inline;
+  margin-bottom: 8px;
+  background-color: #c4941d;
+  color: white;
+  font-weight: 400;
+  font-size: 15px;
+}
+
 #scroll-canvas {
-  overflow: scroll;
+  overflow-x: scroll;
   width: 1080px;
+  padding: 0px;
+  margin: 0px;
+  border: 2px solid black;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 48px;
 }
 #scroll-canvas canvas {
-  border: 2px solid black;
-  margin: 15px;
+  background-color: white;
+  margin: 0px;
+  padding: 0px;
 }
 
 /*# sourceMappingURL=style.css.map */

@@ -1,40 +1,120 @@
-<!doctype HTML>
+<!DOCTYPE html>
 <head>
-   <link rel="stylesheet" type="text/css" href="style.css">
-  <script src="javascript.js"></script>
+   <title>Energy Conservation Simulation</title>
+   <link rel="stylesheet" type="text/css" href="style.css" />
+   <script src="javascript.js"></script>
 </head>
 <body>
+   <div id="title">Energy Conservation Simulation</div>
+   <div id="description">
+      <span id="name">By Justin Narayan for SPH4U</span>
+      <br /><br />
+      <div>Description</div>
+      This physics simulation demonstrates the conservation of mechanical
+      energy. The initial potential energy of the system present in the spring
+      is converted to the kinetic and potential energy of the sliding ball as
+      well as lost due to friction between the ball and the ground/ramp
+      throughout the course of the simulation. A free-body-diagram of all forces
+      acting on the ball is also presented.<br /><br />
+      <div>Assumptions</div>
+      All of the system's elements' behaviours are assumed to exactly follow the
+      mathematical models taught in SPH4U. It is assumed that the ball does not
+      rotate but instead only slides, therefore all the ball's mechanical energy
+      is kinetic and potential. As well, it is assumed that the coefficient of
+      static friction is very large such that if the ball halts on the ramp, it
+      will stay in place. Once the ball loses all of its kinetic energy or
+      impacts the ground after free-fall, the simulation ends.<br /><br />
+      <div>Interactivity</div>
+      Users of the simulation can adjust values for the ball's mass, the
+      spring's rigidity constant and compression distance, the ramp angle, and
+      the coefficient of kinetic friction between the ball and the ground/ramp.
+      Once these values are adjusted, the simulation automatically resets to
+      demonstrate how these values impact the system.<br /><br />
+      Users can allow the system to play in real time or choose to pause and
+      step through the simulation in discrete increments.
+   </div>
    <div id="inputs-section">
-      <div id="constant-changing-inputs" onchange="updateInputs(true);">
-         <p class="input-titles">Block Mass (kilograms): <span id="display-block-mass"></span></p>
-         <input type="range" min="2" max="10" value="5" step="0.5" id="block-mass">
+      <div onchange="updateInputs();">
+         <p class="input-titles">
+            Ball Mass (kilograms): <span id="display-block-mass"></span>
+         </p>
+         <input
+            type="range"
+            min="2"
+            max="10"
+            value="5"
+            step="0.5"
+            id="block-mass"
+         />
 
-            <p class="input-titles">Spring Constant (Newtons / meter): <span id="display-spring-constant"></span></p>
-            <input type="range" min="5" max="20" value="12" step="0.1" id="spring-constant">
+         <p class="input-titles">
+            Spring Constant (Newtons / meter):
+            <span id="display-spring-constant"></span>
+         </p>
+         <input
+            type="range"
+            min="5"
+            max="20"
+            value="12"
+            step="0.1"
+            id="spring-constant"
+         />
 
-         <p class="input-titles">Compression Distance (meters): <span id="display-compression-distance"></span></p>
-         <input type="range" min="4" max="16" value="10" step="0.5" id="compression-distance">
+         <p class="input-titles">
+            Compression Distance (meters):
+            <span id="display-compression-distance"></span>
+         </p>
+         <input
+            type="range"
+            min="4"
+            max="16"
+            value="10"
+            step="0.5"
+            id="compression-distance"
+         />
 
-         <p class="input-titles">Ramp Angle (degrees): <span id="display-ramp-angle"></span></p>
-         <input type="range" min="10" max="50" value="30" step="1" id="ramp-angle">
-         
-         <p class="input-titles">Coefficient of Kinetic Friction: <span id="display-coefficient-kinetic-friction"></span></p>
-         <input type="range" min="0" max="1" value="0.05" step="0.005" id="coefficient-kinetic-friction">
+         <p class="input-titles">
+            Ramp Angle (degrees): <span id="display-ramp-angle"></span>
+         </p>
+         <input
+            type="range"
+            min="10"
+            max="50"
+            value="30"
+            step="1"
+            id="ramp-angle"
+         />
+
+         <p class="input-titles">
+            Coefficient of Kinetic Friction:
+            <span id="display-coefficient-kinetic-friction"></span>
+         </p>
+         <input
+            type="range"
+            min="0"
+            max="1"
+            value="0.05"
+            step="0.005"
+            id="coefficient-kinetic-friction"
+         />
       </div>
 
-      <br>
+      <br />
 
-      <div id="non-constant-changing-inputs" onchange="updateInputs(false)"> 
-         <!-- Inputs which do not require recalculation of simulation constants-->
+      <!-- Inputs which do not require recalculation of simulation constants-->
+      <div>
          <button id="play-pause" onclick="playPause();">Press to Play</button>
          <button id="reset" onclick="reset();">Reset Time</button>
-         <br>
+         <input
+            id="time-step"
+            onchange="updateTimeStep()"
+            type="number"
+            placeholder="Manual Time Step (seconds)"
+         />
          <button id="step-back" onclick="step(-1)">Step Back</button>
-         <input id="time-step" onchange="updateTimeStep()" type="number" placeholder="Manual Time Step (seconds)">
          <button id="step-forward" onclick="step(1)">Step Forward</button>
       </div>
-
-      <br>
+      <br />
    </div>
 
    <div id="scroll-canvas">
